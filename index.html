@@ -1112,7 +1112,7 @@
 
             const warped = warpSheet(gray, markers, layout.markerCenters);
             const warpedBinary = createWarpedAnswerMask(warped);
-            const answers = readAnswers(warpedBinary, layout);
+            const answers = readAnswers(warped, warpedBinary, layout);
             warpedBinary.delete();
             warped.delete();
 
@@ -1253,12 +1253,15 @@
         return binary;
     }
 
-    function readAnswers(warpedBinary, layout) {
+    function readAnswers(warpedGray, warpedBinary, layout) {
         return window.ScannerCore.readAnswersFromBinaryMatrix({
             width: warpedBinary.cols,
             height: warpedBinary.rows,
             getInkAt(x, y) {
-                return warpedBinary.ucharPtr(y, x)[0] / 255;
+                const binaryInk = warpedBinary.ucharPtr(y, x)[0] / 255;
+                const grayscaleInk = 1 - (warpedGray.ucharPtr(y, x)[0] / 255);
+
+                return (binaryInk * 0.75) + (grayscaleInk * 0.25);
             }
         }, layout, CHOICES);
     }

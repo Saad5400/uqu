@@ -83,11 +83,11 @@
         const bestAdjusted = best.value - baseline;
         const nextAdjusted = next.value - baseline;
 
-        if (bestAdjusted < 0.16) {
+        if (bestAdjusted < 0.08) {
             return null;
         }
 
-        if (nextAdjusted >= 0.12 && (nextAdjusted / Math.max(bestAdjusted, 0.0001)) >= 0.72) {
+        if (nextAdjusted >= 0.09 && (nextAdjusted / Math.max(bestAdjusted, 0.0001)) >= 0.72) {
             return "MULTI";
         }
 
