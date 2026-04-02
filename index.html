@@ -584,6 +584,7 @@
     };
 </script>
 <script async src="https://docs.opencv.org/4.x/opencv.js"></script>
+<script src="./scanner-core.js"></script>
 <script>
     const CHOICES = ["A", "B", "C", "D", "E"];
     const SHEET_WIDTH = 1000;
@@ -1110,7 +1111,9 @@
             }
 
             const warped = warpSheet(gray, markers, layout.markerCenters);
-            const answers = readAnswers(warped, layout);
+            const warpedBinary = createWarpedAnswerMask(warped);
+            const answers = readAnswers(warpedBinary, layout);
+            warpedBinary.delete();
             warped.delete();
 
             return {
@@ -1239,66 +1242,25 @@
         return warped;
     }
 
-    function readAnswers(warpedGray, layout) {
-        const answers = [];
-        const sampleRadius = 8;
+    function createWarpedAnswerMask(warpedGray) {
+        const blurred = new cv.Mat();
+        const binary = new cv.Mat();
 
-        layout.questions.forEach((question) => {
-            const darkness = question.bubbles.map((bubble) => {
-                return sampleDarkness(warpedGray, Math.round(bubble.x), Math.round(bubble.y), sampleRadius);
-            });
+        cv.GaussianBlur(warpedGray, blurred, new cv.Size(5, 5), 0, 0, cv.BORDER_DEFAULT);
+        cv.adaptiveThreshold(blurred, binary, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY_INV, 31, 6);
+        blurred.delete();
 
-            const sorted = darkness
-                .map((value, index) => ({ value, index }))
-                .sort((a, b) => b.value - a.value);
-
-            const best = sorted[0];
-            const next = sorted[1];
-
-            if (best.value < 38) {
-                answers.push(null);
-                return;
-            }
-
-            if (next.value > 32 && (best.value - next.value) < 14) {
-                answers.push("MULTI");
-                return;
-            }
-
-            answers.push(CHOICES[best.index]);
-        });
-
-        return answers;
+        return binary;
     }
 
-    function sampleDarkness(mat, centerX, centerY, radius) {
-        let total = 0;
-        let count = 0;
-
-        for (let offsetY = -radius; offsetY <= radius; offsetY += 1) {
-            for (let offsetX = -radius; offsetX <= radius; offsetX += 1) {
-                if ((offsetX * offsetX) + (offsetY * offsetY) > radius * radius) {
-                    continue;
-                }
-
-                const x = centerX + offsetX;
-                const y = centerY + offsetY;
-
-                if (x < 0 || x >= mat.cols || y < 0 || y >= mat.rows) {
-                    continue;
-                }
-
-                total += mat.ucharPtr(y, x)[0];
-                count += 1;
+    function readAnswers(warpedBinary, layout) {
+        return window.ScannerCore.readAnswersFromBinaryMatrix({
+            width: warpedBinary.cols,
+            height: warpedBinary.rows,
+            getInkAt(x, y) {
+                return warpedBinary.ucharPtr(y, x)[0] / 255;
             }
-        }
-
-        if (!count) {
-            return 0;
-        }
-
-        const mean = total / count;
-        return 255 - mean;
+        }, layout, CHOICES);
     }
 
     function drawOverlay(result, width, height) {
