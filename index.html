@@ -1,0 +1,1321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Answer Sheet Sandbox</title>
+    <style>
+        :root {
+            color-scheme: light;
+            --bg: #f4f7fb;
+            --panel: #ffffff;
+            --panel-alt: #eef3f9;
+            --text: #10233c;
+            --muted: #55708f;
+            --line: #cdd8e5;
+            --accent: #0069d9;
+            --accent-strong: #0051a8;
+            --danger: #c53b3b;
+            --success: #147a53;
+            --shadow: 0 24px 60px rgba(16, 35, 60, 0.12);
+            --sheet-max-width: 860px;
+            --scanner-width: 860px;
+            font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            background:
+                radial-gradient(circle at top left, rgba(0, 105, 217, 0.08), transparent 30%),
+                radial-gradient(circle at top right, rgba(20, 122, 83, 0.08), transparent 26%),
+                linear-gradient(180deg, #f8fbff 0%, var(--bg) 100%);
+            color: var(--text);
+        }
+
+        .page {
+            width: min(1200px, calc(100% - 32px));
+            margin: 32px auto 48px;
+            display: grid;
+            gap: 24px;
+        }
+
+        .hero,
+        .panel {
+            background: rgba(255, 255, 255, 0.94);
+            border: 1px solid rgba(205, 216, 229, 0.9);
+            border-radius: 24px;
+            box-shadow: var(--shadow);
+            backdrop-filter: blur(10px);
+        }
+
+        .hero {
+            padding: 28px 28px 22px;
+        }
+
+        .hero h1,
+        .panel h2 {
+            margin: 0;
+            font-weight: 800;
+            letter-spacing: -0.03em;
+        }
+
+        .hero p,
+        .panel p {
+            margin: 0;
+            color: var(--muted);
+            line-height: 1.55;
+        }
+
+        .hero-copy {
+            display: grid;
+            gap: 12px;
+        }
+
+        .panel {
+            padding: 24px;
+            display: grid;
+            gap: 20px;
+        }
+
+        .panel-head {
+            display: grid;
+            gap: 8px;
+        }
+
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+            gap: 14px;
+            align-items: end;
+        }
+
+        .field {
+            display: grid;
+            gap: 8px;
+        }
+
+        .field label {
+            font-size: 0.92rem;
+            font-weight: 700;
+            color: var(--text);
+        }
+
+        .field small {
+            color: var(--muted);
+            font-size: 0.82rem;
+        }
+
+        input,
+        select,
+        button {
+            font: inherit;
+        }
+
+        input,
+        select {
+            width: 100%;
+            min-height: 48px;
+            border-radius: 14px;
+            border: 1px solid var(--line);
+            background: var(--panel);
+            color: var(--text);
+            padding: 0 14px;
+            outline: none;
+            transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+        }
+
+        input:focus,
+        select:focus {
+            border-color: rgba(0, 105, 217, 0.8);
+            box-shadow: 0 0 0 4px rgba(0, 105, 217, 0.13);
+        }
+
+        .actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        button {
+            border: 0;
+            border-radius: 14px;
+            min-height: 48px;
+            padding: 0 18px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: transform 160ms ease, box-shadow 160ms ease, background 160ms ease, opacity 160ms ease;
+        }
+
+        button:hover {
+            transform: translateY(-1px);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .button-primary {
+            background: linear-gradient(135deg, var(--accent) 0%, #1280e8 100%);
+            color: #fff;
+            box-shadow: 0 14px 28px rgba(0, 105, 217, 0.22);
+        }
+
+        .button-secondary {
+            background: var(--panel-alt);
+            color: var(--text);
+        }
+
+        .button-danger {
+            background: rgba(197, 59, 59, 0.12);
+            color: var(--danger);
+        }
+
+        .meta-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .pill {
+            padding: 8px 12px;
+            border-radius: 999px;
+            background: var(--panel-alt);
+            color: var(--muted);
+            font-size: 0.88rem;
+            font-weight: 700;
+        }
+
+        .pill strong {
+            color: var(--text);
+        }
+
+        .sheet-shell {
+            display: grid;
+            justify-items: center;
+            gap: 16px;
+        }
+
+        .sheet-stage {
+            width: min(100%, var(--sheet-max-width));
+            background: #fff;
+            border-radius: 28px;
+            border: 1px solid rgba(16, 35, 60, 0.1);
+            box-shadow: 0 18px 44px rgba(16, 35, 60, 0.12);
+            overflow: hidden;
+        }
+
+        .sheet-stage svg {
+            width: 100%;
+            height: auto;
+            display: block;
+            background: #fff;
+        }
+
+        .scanner-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.8fr);
+            gap: 18px;
+            align-items: start;
+        }
+
+        .video-shell {
+            position: relative;
+            width: min(100%, var(--scanner-width));
+            aspect-ratio: 4 / 3;
+            border-radius: 24px;
+            overflow: hidden;
+            background:
+                radial-gradient(circle at 20% 20%, rgba(18, 128, 232, 0.2), transparent 28%),
+                linear-gradient(135deg, #09192a, #17314f);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+        }
+
+        video,
+        .overlay {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        video {
+            object-fit: cover;
+            background: #09192a;
+        }
+
+        .overlay {
+            pointer-events: none;
+        }
+
+        .scanner-hud {
+            position: absolute;
+            left: 16px;
+            right: 16px;
+            bottom: 16px;
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .status-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            min-height: 40px;
+            padding: 0 14px;
+            border-radius: 999px;
+            background: rgba(9, 25, 42, 0.68);
+            color: #fff;
+            backdrop-filter: blur(10px);
+            font-size: 0.9rem;
+            font-weight: 700;
+        }
+
+        .status-chip::before {
+            content: "";
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #ffce54;
+            box-shadow: 0 0 0 6px rgba(255, 206, 84, 0.16);
+        }
+
+        .status-chip.good::before {
+            background: #45dc91;
+            box-shadow: 0 0 0 6px rgba(69, 220, 145, 0.18);
+        }
+
+        .status-chip.bad::before {
+            background: #ff6b6b;
+            box-shadow: 0 0 0 6px rgba(255, 107, 107, 0.18);
+        }
+
+        .results-shell {
+            display: grid;
+            gap: 14px;
+            padding: 16px;
+            background: linear-gradient(180deg, rgba(238, 243, 249, 0.8), rgba(255, 255, 255, 0.96));
+            border: 1px solid var(--line);
+            border-radius: 22px;
+            min-height: 100%;
+        }
+
+        .results-summary {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px;
+        }
+
+        .metric {
+            padding: 14px;
+            border-radius: 18px;
+            background: #fff;
+            border: 1px solid rgba(205, 216, 229, 0.8);
+        }
+
+        .metric strong {
+            display: block;
+            font-size: 1.35rem;
+            line-height: 1.1;
+        }
+
+        .metric span {
+            color: var(--muted);
+            font-size: 0.86rem;
+        }
+
+        .results-list {
+            display: grid;
+            gap: 8px;
+            max-height: 560px;
+            overflow: auto;
+            padding-right: 4px;
+        }
+
+        .result-row {
+            display: grid;
+            grid-template-columns: auto 1fr auto;
+            gap: 10px;
+            align-items: center;
+            padding: 10px 12px;
+            background: #fff;
+            border-radius: 16px;
+            border: 1px solid rgba(205, 216, 229, 0.9);
+        }
+
+        .result-row strong {
+            min-width: 34px;
+            font-size: 0.92rem;
+        }
+
+        .answer-badge {
+            justify-self: end;
+            min-width: 46px;
+            text-align: center;
+            padding: 8px 10px;
+            border-radius: 999px;
+            font-weight: 800;
+            letter-spacing: 0.05em;
+            background: rgba(0, 105, 217, 0.1);
+            color: var(--accent-strong);
+        }
+
+        .answer-badge.blank {
+            background: rgba(85, 112, 143, 0.12);
+            color: var(--muted);
+        }
+
+        .answer-badge.multiple {
+            background: rgba(197, 59, 59, 0.12);
+            color: var(--danger);
+        }
+
+        .notice {
+            padding: 14px 16px;
+            border-radius: 16px;
+            background: rgba(0, 105, 217, 0.08);
+            color: var(--muted);
+            border: 1px solid rgba(0, 105, 217, 0.12);
+            line-height: 1.5;
+        }
+
+        .hidden-canvas {
+            display: none;
+        }
+
+        .print-sheet {
+            display: none;
+        }
+
+        @media (max-width: 980px) {
+            .scanner-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media print {
+            @page {
+                size: A4 portrait;
+                margin: 8mm;
+            }
+
+            body {
+                margin: 0;
+                background: #fff;
+            }
+
+            .page > *:not(.print-sheet) {
+                display: none !important;
+            }
+
+            .print-sheet {
+                display: block !important;
+            }
+
+            .sheet-stage {
+                width: auto;
+                max-width: none;
+                border: 0;
+                border-radius: 0;
+                box-shadow: none;
+                overflow: visible;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="page">
+    <section class="hero">
+        <div class="hero-copy">
+            <h1>Answer Sheet Sandbox</h1>
+            <p>Create a printable multiple-choice answer sheet, save it through the browser print dialog as PDF, then scan the same sheet live with the camera to read marked answers.</p>
+            <div class="meta-row">
+                <div class="pill"><strong>Choices</strong> A B C D E</div>
+                <div class="pill"><strong>Scan mode</strong> Live camera stream</div>
+                <div class="pill"><strong>Layout rule</strong> Same question count for print and scan</div>
+            </div>
+        </div>
+    </section>
+
+    <section class="panel">
+        <div class="panel-head">
+            <h2>1. Generate Sheet</h2>
+            <p>Choose the number of questions, generate the sheet, then print using your browser and save as PDF if needed.</p>
+        </div>
+
+        <div class="controls">
+            <div class="field">
+                <label for="questionCount">Question count</label>
+                <input id="questionCount" type="number" min="5" max="100" value="40">
+                <small>Supports 5 to 100 questions. Choices stay fixed at A-E.</small>
+            </div>
+
+            <div class="field">
+                <label for="sheetTitle">Sheet title</label>
+                <input id="sheetTitle" type="text" value="Practice Test">
+                <small>Printed in the header only.</small>
+            </div>
+        </div>
+
+        <div class="actions">
+            <button id="generateButton" class="button-primary" type="button">Generate Sheet</button>
+            <button id="printButton" class="button-secondary" type="button">Print / Save as PDF</button>
+            <button id="syncScanButton" class="button-secondary" type="button">Use Same Count for Scanner</button>
+        </div>
+
+        <div class="sheet-shell">
+            <div class="sheet-stage" id="sheetStage" aria-live="polite"></div>
+            <div class="notice">The scanner below expects this exact layout. If you change the question count, regenerate the sheet and keep the scanner count in sync.</div>
+        </div>
+    </section>
+
+    <section class="panel">
+        <div class="panel-head">
+            <h2>2. Scan Sheet</h2>
+            <p>Point the camera at the printed sheet. The app detects the four registration markers, corrects perspective, and reads bubble darkness live.</p>
+        </div>
+
+        <div class="controls">
+            <div class="field">
+                <label for="scanQuestionCount">Scanner question count</label>
+                <input id="scanQuestionCount" type="number" min="5" max="100" value="40">
+                <small>Must match the generated sheet.</small>
+            </div>
+
+            <div class="field">
+                <label for="cameraSelect">Camera</label>
+                <select id="cameraSelect">
+                    <option value="">Default / back camera</option>
+                </select>
+                <small>Switch cameras if your browser exposes multiple devices.</small>
+            </div>
+        </div>
+
+        <div class="actions">
+            <button id="startScanButton" class="button-primary" type="button">Start Camera</button>
+            <button id="stopScanButton" class="button-danger" type="button" disabled>Stop Camera</button>
+        </div>
+
+        <div class="scanner-grid">
+            <div class="video-shell">
+                <video id="video" playsinline muted></video>
+                <canvas id="overlay" class="overlay"></canvas>
+                <div class="scanner-hud">
+                    <div id="statusChip" class="status-chip">OpenCV loading...</div>
+                    <div class="status-chip" id="stabilityChip">Waiting for sheet</div>
+                </div>
+            </div>
+
+            <div class="results-shell">
+                <div class="results-summary">
+                    <div class="metric">
+                        <strong id="answeredCount">0</strong>
+                        <span>Detected answers</span>
+                    </div>
+                    <div class="metric">
+                        <strong id="multipleCount">0</strong>
+                        <span>Multiple / uncertain</span>
+                    </div>
+                </div>
+                <div class="notice" id="scanNotice">Camera access needs a secure context. If the camera does not open from a local file, serve this HTML from <strong>localhost</strong>.</div>
+                <div class="results-list" id="resultsList"></div>
+            </div>
+        </div>
+
+        <canvas id="processingCanvas" class="hidden-canvas"></canvas>
+    </section>
+
+    <section class="print-sheet">
+        <div class="sheet-stage" id="printSheetStage"></div>
+    </section>
+</div>
+
+<script>
+    window.__cvRuntimeReady = false;
+    window.__onCvReady = null;
+    window.Module = {
+        onRuntimeInitialized() {
+            window.__cvRuntimeReady = true;
+
+            if (typeof window.__onCvReady === "function") {
+                window.__onCvReady();
+            }
+        }
+    };
+</script>
+<script async src="https://docs.opencv.org/4.x/opencv.js"></script>
+<script>
+    const CHOICES = ["A", "B", "C", "D", "E"];
+    const SHEET_WIDTH = 1000;
+    const SHEET_HEIGHT = 1414;
+    const MARKER_SIZE = 42;
+    const MARKER_MARGIN = 38;
+    const MAX_QUESTIONS_PER_COLUMN = 25;
+
+    const questionCountInput = document.getElementById("questionCount");
+    const scanQuestionCountInput = document.getElementById("scanQuestionCount");
+    const sheetTitleInput = document.getElementById("sheetTitle");
+    const sheetStage = document.getElementById("sheetStage");
+    const printSheetStage = document.getElementById("printSheetStage");
+    const generateButton = document.getElementById("generateButton");
+    const printButton = document.getElementById("printButton");
+    const syncScanButton = document.getElementById("syncScanButton");
+    const startScanButton = document.getElementById("startScanButton");
+    const stopScanButton = document.getElementById("stopScanButton");
+    const cameraSelect = document.getElementById("cameraSelect");
+    const video = document.getElementById("video");
+    const overlay = document.getElementById("overlay");
+    const overlayContext = overlay.getContext("2d");
+    const processingCanvas = document.getElementById("processingCanvas");
+    const processingContext = processingCanvas.getContext("2d", { willReadFrequently: true });
+    const statusChip = document.getElementById("statusChip");
+    const stabilityChip = document.getElementById("stabilityChip");
+    const answeredCount = document.getElementById("answeredCount");
+    const multipleCount = document.getElementById("multipleCount");
+    const resultsList = document.getElementById("resultsList");
+
+    let currentLayout = null;
+    let stream = null;
+    let scanLoopHandle = 0;
+    let recentDetections = [];
+    let cvReady = false;
+    let cvReadyPromiseResolve = null;
+    let lastStatus = "";
+
+    const cvReadyPromise = new Promise((resolve) => {
+        cvReadyPromiseResolve = resolve;
+    });
+
+    function setStatus(message, tone = "neutral") {
+        if (lastStatus === message + tone) {
+            return;
+        }
+
+        statusChip.textContent = message;
+        statusChip.className = "status-chip";
+
+        if (tone === "good") {
+            statusChip.classList.add("good");
+        }
+
+        if (tone === "bad") {
+            statusChip.classList.add("bad");
+        }
+
+        lastStatus = message + tone;
+    }
+
+    async function ensureCvReady(timeoutMs = 12000) {
+        if (cvReady) {
+            return;
+        }
+
+        setStatus("Loading scanner...");
+
+        await Promise.race([
+            cvReadyPromise,
+            new Promise((_, reject) => {
+                window.setTimeout(() => {
+                    reject(new Error("Scanner engine is still loading. Wait a moment and try again."));
+                }, timeoutMs);
+            })
+        ]);
+    }
+
+    function clampQuestionCount(value) {
+        const numeric = Number.parseInt(value, 10);
+
+        if (!Number.isFinite(numeric)) {
+            return 40;
+        }
+
+        return Math.min(100, Math.max(5, numeric));
+    }
+
+    function getMarkerCenters() {
+        return {
+            topLeft: [MARKER_MARGIN + (MARKER_SIZE / 2), MARKER_MARGIN + (MARKER_SIZE / 2)],
+            topRight: [SHEET_WIDTH - MARKER_MARGIN - (MARKER_SIZE / 2), MARKER_MARGIN + (MARKER_SIZE / 2)],
+            bottomRight: [SHEET_WIDTH - MARKER_MARGIN - (MARKER_SIZE / 2), SHEET_HEIGHT - MARKER_MARGIN - (MARKER_SIZE / 2)],
+            bottomLeft: [MARKER_MARGIN + (MARKER_SIZE / 2), SHEET_HEIGHT - MARKER_MARGIN - (MARKER_SIZE / 2)]
+        };
+    }
+
+    function buildLayout(questionCount) {
+        const safeQuestionCount = clampQuestionCount(questionCount);
+        const columnCount = Math.ceil(safeQuestionCount / MAX_QUESTIONS_PER_COLUMN);
+        const usableWidth = SHEET_WIDTH - 140;
+        const columnWidth = usableWidth / columnCount;
+        const topStart = 220;
+        const bottomLimit = SHEET_HEIGHT - 110;
+        const rowsPerColumn = Math.ceil(safeQuestionCount / columnCount);
+        const rowHeight = Math.min(46, (bottomLimit - topStart) / Math.max(rowsPerColumn, 1));
+        const bubbleStartOffset = 82;
+        const bubbleGap = 44;
+        const bubbleRadius = 12;
+        const questions = [];
+
+        for (let index = 0; index < safeQuestionCount; index += 1) {
+            const columnIndex = Math.floor(index / MAX_QUESTIONS_PER_COLUMN);
+            const rowIndex = index % MAX_QUESTIONS_PER_COLUMN;
+            const baseX = 78 + (columnIndex * columnWidth);
+            const centerY = topStart + (rowIndex * rowHeight);
+            const bubbles = CHOICES.map((choice, choiceIndex) => ({
+                choice,
+                x: baseX + bubbleStartOffset + (choiceIndex * bubbleGap),
+                y: centerY
+            }));
+
+            questions.push({
+                number: index + 1,
+                columnIndex,
+                rowIndex,
+                labelX: baseX,
+                centerY,
+                bubbles
+            });
+        }
+
+        return {
+            questionCount: safeQuestionCount,
+            columnCount,
+            rowsPerColumn,
+            rowHeight,
+            columnWidth,
+            bubbleRadius,
+            questions,
+            markerCenters: getMarkerCenters()
+        };
+    }
+
+    function buildSheetSvg(layout, title) {
+        const titleText = escapeHtml(title || "Practice Test");
+        const columnHeaderY = 182;
+        const headerChoiceOffset = 82;
+        const headerChoiceGap = 44;
+        const markerCenters = layout.markerCenters;
+
+        const columnHeaders = Array.from({ length: layout.columnCount }, (_, columnIndex) => {
+            const baseX = 78 + (columnIndex * layout.columnWidth);
+
+            return `
+                <text x="${baseX}" y="${columnHeaderY}" font-size="19" font-weight="800" fill="#10233c">Question</text>
+                ${CHOICES.map((choice, choiceIndex) => `
+                    <text x="${baseX + headerChoiceOffset + (choiceIndex * headerChoiceGap)}" y="${columnHeaderY}" font-size="17" font-weight="800" text-anchor="middle" fill="#10233c">${choice}</text>
+                `).join("")}
+            `;
+        }).join("");
+
+        const questionRows = layout.questions.map((question) => {
+            return `
+                <text x="${question.labelX}" y="${question.centerY + 6}" font-size="18" font-weight="700" fill="#10233c">${String(question.number).padStart(2, "0")}</text>
+                ${question.bubbles.map((bubble) => `
+                    <circle cx="${bubble.x}" cy="${bubble.y}" r="${layout.bubbleRadius}" fill="#ffffff" stroke="#10233c" stroke-width="2.6"></circle>
+                `).join("")}
+            `;
+        }).join("");
+
+        const markerSquares = Object.values(markerCenters).map(([x, y]) => {
+            const left = x - (MARKER_SIZE / 2);
+            const top = y - (MARKER_SIZE / 2);
+
+            return `
+                <rect x="${left}" y="${top}" width="${MARKER_SIZE}" height="${MARKER_SIZE}" rx="2" fill="#111111"></rect>
+                <rect x="${left + 8}" y="${top + 8}" width="${MARKER_SIZE - 16}" height="${MARKER_SIZE - 16}" fill="#ffffff"></rect>
+                <rect x="${left + 14}" y="${top + 14}" width="${MARKER_SIZE - 28}" height="${MARKER_SIZE - 28}" fill="#111111"></rect>
+            `;
+        }).join("");
+
+        return `
+            <svg viewBox="0 0 ${SHEET_WIDTH} ${SHEET_HEIGHT}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Printable answer sheet">
+                <rect x="0" y="0" width="${SHEET_WIDTH}" height="${SHEET_HEIGHT}" fill="#ffffff"></rect>
+                <rect x="24" y="24" width="${SHEET_WIDTH - 48}" height="${SHEET_HEIGHT - 48}" rx="28" fill="none" stroke="#10233c" stroke-width="2.4"></rect>
+                ${markerSquares}
+                <text x="78" y="92" font-size="34" font-weight="900" fill="#10233c">${titleText}</text>
+                <text x="78" y="126" font-size="16" fill="#55708f">Fill one bubble per question. Keep the four square markers visible when scanning.</text>
+                <text x="${SHEET_WIDTH - 78}" y="92" font-size="26" font-weight="800" fill="#10233c" text-anchor="end">${layout.questionCount} Questions</text>
+                <line x1="78" y1="148" x2="${SHEET_WIDTH - 78}" y2="148" stroke="#cdd8e5" stroke-width="2"></line>
+                ${columnHeaders}
+                ${questionRows}
+                <line x1="78" y1="${SHEET_HEIGHT - 82}" x2="${SHEET_WIDTH - 78}" y2="${SHEET_HEIGHT - 82}" stroke="#cdd8e5" stroke-width="2"></line>
+                <text x="78" y="${SHEET_HEIGHT - 48}" font-size="15" fill="#55708f">Generated by the sandbox. Scanner geometry depends on this exact layout.</text>
+                <text x="${SHEET_WIDTH - 78}" y="${SHEET_HEIGHT - 48}" font-size="15" fill="#55708f" text-anchor="end">Choices: A B C D E</text>
+            </svg>
+        `;
+    }
+
+    function escapeHtml(value) {
+        return String(value)
+            .replaceAll("&", "&amp;")
+            .replaceAll("<", "&lt;")
+            .replaceAll(">", "&gt;")
+            .replaceAll('"', "&quot;")
+            .replaceAll("'", "&#039;");
+    }
+
+    function renderSheet() {
+        const questionCount = clampQuestionCount(questionCountInput.value);
+        const title = sheetTitleInput.value.trim() || "Practice Test";
+
+        questionCountInput.value = questionCount;
+        currentLayout = buildLayout(questionCount);
+        const svg = buildSheetSvg(currentLayout, title);
+        sheetStage.innerHTML = svg;
+        printSheetStage.innerHTML = svg;
+        renderResultRows(currentLayout.questionCount);
+    }
+
+    function renderResultRows(questionCount) {
+        const safeQuestionCount = clampQuestionCount(questionCount);
+
+        resultsList.innerHTML = Array.from({ length: safeQuestionCount }, (_, index) => {
+            return `
+                <div class="result-row" data-question="${index + 1}">
+                    <strong>Q${index + 1}</strong>
+                    <span>Waiting for scan</span>
+                    <span class="answer-badge blank">-</span>
+                </div>
+            `;
+        }).join("");
+
+        answeredCount.textContent = "0";
+        multipleCount.textContent = "0";
+    }
+
+    function updateResultRows(answers) {
+        let answered = 0;
+        let multiple = 0;
+
+        answers.forEach((answer, index) => {
+            const row = resultsList.querySelector(`[data-question="${index + 1}"]`);
+
+            if (!row) {
+                return;
+            }
+
+            const label = row.querySelector("span");
+            const badge = row.querySelector(".answer-badge");
+
+            badge.className = "answer-badge";
+
+            if (answer === null) {
+                label.textContent = "Blank";
+                badge.textContent = "-";
+                badge.classList.add("blank");
+                return;
+            }
+
+            if (answer === "MULTI") {
+                label.textContent = "Multiple marks";
+                badge.textContent = "MULTI";
+                badge.classList.add("multiple");
+                multiple += 1;
+                return;
+            }
+
+            label.textContent = `Detected ${answer}`;
+            badge.textContent = answer;
+            answered += 1;
+        });
+
+        answeredCount.textContent = String(answered);
+        multipleCount.textContent = String(multiple);
+    }
+
+    async function populateCameras() {
+        if (!navigator.mediaDevices?.enumerateDevices) {
+            return;
+        }
+
+        try {
+            const devices = await navigator.mediaDevices.enumerateDevices();
+            const cameras = devices.filter((device) => device.kind === "videoinput");
+            const currentValue = cameraSelect.value;
+            const options = ['<option value="">Default / back camera</option>'];
+
+            cameras.forEach((camera, index) => {
+                const label = camera.label || `Camera ${index + 1}`;
+                options.push(`<option value="${escapeHtml(camera.deviceId)}">${escapeHtml(label)}</option>`);
+            });
+
+            cameraSelect.innerHTML = options.join("");
+
+            if (cameras.some((camera) => camera.deviceId === currentValue)) {
+                cameraSelect.value = currentValue;
+            }
+        } catch (error) {
+            console.error(error);
+        }
+    }
+
+    async function startCamera() {
+        const questionCount = clampQuestionCount(scanQuestionCountInput.value);
+        scanQuestionCountInput.value = questionCount;
+
+        await ensureCvReady();
+        await stopCamera();
+
+        const selectedDeviceId = cameraSelect.value;
+        const constraints = selectedDeviceId ? {
+            audio: false,
+            video: {
+                deviceId: { exact: selectedDeviceId },
+                width: { ideal: 1920 },
+                height: { ideal: 1080 }
+            }
+        } : {
+            audio: false,
+            video: {
+                facingMode: { ideal: "environment" },
+                width: { ideal: 1920 },
+                height: { ideal: 1080 }
+            }
+        };
+
+        stream = await navigator.mediaDevices.getUserMedia(constraints);
+        video.srcObject = stream;
+        await video.play();
+        await populateCameras();
+
+        startScanButton.disabled = true;
+        stopScanButton.disabled = false;
+        recentDetections = [];
+        overlay.width = video.videoWidth || 1280;
+        overlay.height = video.videoHeight || 720;
+        setStatus("Camera live", "good");
+        stabilityChip.textContent = "Searching for sheet";
+        scanLoop();
+    }
+
+    async function stopCamera() {
+        if (scanLoopHandle) {
+            cancelAnimationFrame(scanLoopHandle);
+            scanLoopHandle = 0;
+        }
+
+        if (stream) {
+            stream.getTracks().forEach((track) => track.stop());
+            stream = null;
+        }
+
+        video.srcObject = null;
+        overlayContext.clearRect(0, 0, overlay.width, overlay.height);
+        startScanButton.disabled = false;
+        stopScanButton.disabled = true;
+        recentDetections = [];
+        setStatus(cvReady ? "Ready to scan" : "OpenCV loading...");
+        stabilityChip.textContent = "Waiting for sheet";
+    }
+
+    function getScanLayout() {
+        return buildLayout(clampQuestionCount(scanQuestionCountInput.value));
+    }
+
+    function scanLoop() {
+        if (!stream || video.readyState < 2) {
+            scanLoopHandle = requestAnimationFrame(scanLoop);
+            return;
+        }
+
+        const videoWidth = video.videoWidth;
+        const videoHeight = video.videoHeight;
+
+        if (!videoWidth || !videoHeight) {
+            scanLoopHandle = requestAnimationFrame(scanLoop);
+            return;
+        }
+
+        processingCanvas.width = videoWidth;
+        processingCanvas.height = videoHeight;
+        overlay.width = videoWidth;
+        overlay.height = videoHeight;
+        processingContext.drawImage(video, 0, 0, videoWidth, videoHeight);
+
+        const frameData = processingContext.getImageData(0, 0, videoWidth, videoHeight);
+        const result = processFrame(frameData, getScanLayout());
+        drawOverlay(result, videoWidth, videoHeight);
+
+        if (result.answers) {
+            recentDetections.push(result.answers);
+
+            if (recentDetections.length > 8) {
+                recentDetections.shift();
+            }
+
+            const stableAnswers = aggregateDetections(recentDetections);
+            updateResultRows(stableAnswers);
+            stabilityChip.textContent = `${recentDetections.length}/8 stable frames`;
+            setStatus("Sheet detected", "good");
+        } else {
+            recentDetections = [];
+            stabilityChip.textContent = "Align all four markers";
+            setStatus(result.status, result.statusTone);
+        }
+
+        scanLoopHandle = requestAnimationFrame(scanLoop);
+    }
+
+    function aggregateDetections(detections) {
+        if (!detections.length) {
+            return [];
+        }
+
+        const answerCount = detections[0].length;
+        const stableAnswers = [];
+
+        for (let index = 0; index < answerCount; index += 1) {
+            const counts = new Map();
+
+            detections.forEach((detection) => {
+                const value = detection[index] ?? null;
+                const key = value === null ? "__BLANK__" : value;
+                counts.set(key, (counts.get(key) || 0) + 1);
+            });
+
+            let bestKey = "__BLANK__";
+            let bestCount = -1;
+
+            counts.forEach((count, key) => {
+                if (count > bestCount) {
+                    bestKey = key;
+                    bestCount = count;
+                }
+            });
+
+            stableAnswers.push(bestKey === "__BLANK__" ? null : bestKey);
+        }
+
+        return stableAnswers;
+    }
+
+    function processFrame(imageData, layout) {
+        const rgba = cv.matFromImageData(imageData);
+        const gray = new cv.Mat();
+        const thresholded = new cv.Mat();
+        const contours = new cv.MatVector();
+        const hierarchy = new cv.Mat();
+
+        try {
+            cv.cvtColor(rgba, gray, cv.COLOR_RGBA2GRAY);
+            cv.GaussianBlur(gray, gray, new cv.Size(5, 5), 0, 0, cv.BORDER_DEFAULT);
+            cv.adaptiveThreshold(gray, thresholded, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY_INV, 25, 10);
+            cv.findContours(thresholded, contours, hierarchy, cv.RETR_LIST, cv.CHAIN_APPROX_SIMPLE);
+
+            const markers = detectMarkers(contours, rgba.cols, rgba.rows);
+
+            if (!markers) {
+                return {
+                    status: "Sheet not found",
+                    statusTone: "bad",
+                    markers: null,
+                    answers: null
+                };
+            }
+
+            const warped = warpSheet(gray, markers, layout.markerCenters);
+            const answers = readAnswers(warped, layout);
+            warped.delete();
+
+            return {
+                status: "Sheet aligned",
+                statusTone: "good",
+                markers,
+                answers
+            };
+        } finally {
+            rgba.delete();
+            gray.delete();
+            thresholded.delete();
+            contours.delete();
+            hierarchy.delete();
+        }
+    }
+
+    function detectMarkers(contours, width, height) {
+        const candidates = [];
+        const minimumArea = width * height * 0.00028;
+
+        for (let index = 0; index < contours.size(); index += 1) {
+            const contour = contours.get(index);
+            const area = cv.contourArea(contour);
+
+            if (area < minimumArea) {
+                contour.delete();
+                continue;
+            }
+
+            const perimeter = cv.arcLength(contour, true);
+            const approx = new cv.Mat();
+            cv.approxPolyDP(contour, approx, perimeter * 0.04, true);
+
+            if (approx.rows === 4) {
+                const rect = cv.boundingRect(approx);
+                const aspectRatio = rect.width / Math.max(rect.height, 1);
+                const fillRatio = area / Math.max(rect.width * rect.height, 1);
+
+                if (aspectRatio > 0.7 && aspectRatio < 1.3 && fillRatio > 0.42) {
+                    const center = {
+                        x: rect.x + (rect.width / 2),
+                        y: rect.y + (rect.height / 2)
+                    };
+
+                    candidates.push({
+                        rect,
+                        center,
+                        area
+                    });
+                }
+            }
+
+            approx.delete();
+            contour.delete();
+        }
+
+        if (candidates.length < 4) {
+            return null;
+        }
+
+        const corners = {
+            topLeft: { x: 0, y: 0 },
+            topRight: { x: width, y: 0 },
+            bottomRight: { x: width, y: height },
+            bottomLeft: { x: 0, y: height }
+        };
+
+        const chosen = {};
+        const used = new Set();
+
+        Object.entries(corners).forEach(([key, target]) => {
+            let bestIndex = -1;
+            let bestScore = Number.POSITIVE_INFINITY;
+
+            candidates.forEach((candidate, index) => {
+                if (used.has(index)) {
+                    return;
+                }
+
+                const dx = candidate.center.x - target.x;
+                const dy = candidate.center.y - target.y;
+                const score = Math.hypot(dx, dy) - (candidate.area * 0.02);
+
+                if (score < bestScore) {
+                    bestScore = score;
+                    bestIndex = index;
+                }
+            });
+
+            if (bestIndex >= 0) {
+                used.add(bestIndex);
+                chosen[key] = candidates[bestIndex].center;
+            }
+        });
+
+        if (Object.keys(chosen).length !== 4) {
+            return null;
+        }
+
+        return chosen;
+    }
+
+    function warpSheet(gray, markers, markerCenters) {
+        const source = cv.matFromArray(4, 1, cv.CV_32FC2, [
+            markers.topLeft.x, markers.topLeft.y,
+            markers.topRight.x, markers.topRight.y,
+            markers.bottomRight.x, markers.bottomRight.y,
+            markers.bottomLeft.x, markers.bottomLeft.y
+        ]);
+        const destination = cv.matFromArray(4, 1, cv.CV_32FC2, [
+            markerCenters.topLeft[0], markerCenters.topLeft[1],
+            markerCenters.topRight[0], markerCenters.topRight[1],
+            markerCenters.bottomRight[0], markerCenters.bottomRight[1],
+            markerCenters.bottomLeft[0], markerCenters.bottomLeft[1]
+        ]);
+        const transform = cv.getPerspectiveTransform(source, destination);
+        const warped = new cv.Mat();
+
+        cv.warpPerspective(gray, warped, transform, new cv.Size(SHEET_WIDTH, SHEET_HEIGHT), cv.INTER_LINEAR, cv.BORDER_CONSTANT, new cv.Scalar(255));
+
+        source.delete();
+        destination.delete();
+        transform.delete();
+
+        return warped;
+    }
+
+    function readAnswers(warpedGray, layout) {
+        const answers = [];
+        const sampleRadius = 8;
+
+        layout.questions.forEach((question) => {
+            const darkness = question.bubbles.map((bubble) => {
+                return sampleDarkness(warpedGray, Math.round(bubble.x), Math.round(bubble.y), sampleRadius);
+            });
+
+            const sorted = darkness
+                .map((value, index) => ({ value, index }))
+                .sort((a, b) => b.value - a.value);
+
+            const best = sorted[0];
+            const next = sorted[1];
+
+            if (best.value < 38) {
+                answers.push(null);
+                return;
+            }
+
+            if (next.value > 32 && (best.value - next.value) < 14) {
+                answers.push("MULTI");
+                return;
+            }
+
+            answers.push(CHOICES[best.index]);
+        });
+
+        return answers;
+    }
+
+    function sampleDarkness(mat, centerX, centerY, radius) {
+        let total = 0;
+        let count = 0;
+
+        for (let offsetY = -radius; offsetY <= radius; offsetY += 1) {
+            for (let offsetX = -radius; offsetX <= radius; offsetX += 1) {
+                if ((offsetX * offsetX) + (offsetY * offsetY) > radius * radius) {
+                    continue;
+                }
+
+                const x = centerX + offsetX;
+                const y = centerY + offsetY;
+
+                if (x < 0 || x >= mat.cols || y < 0 || y >= mat.rows) {
+                    continue;
+                }
+
+                total += mat.ucharPtr(y, x)[0];
+                count += 1;
+            }
+        }
+
+        if (!count) {
+            return 0;
+        }
+
+        const mean = total / count;
+        return 255 - mean;
+    }
+
+    function drawOverlay(result, width, height) {
+        overlayContext.clearRect(0, 0, width, height);
+
+        if (!result.markers) {
+            return;
+        }
+
+        overlayContext.strokeStyle = "rgba(69, 220, 145, 0.95)";
+        overlayContext.lineWidth = 6;
+        overlayContext.fillStyle = "rgba(69, 220, 145, 0.24)";
+
+        const ordered = [
+            result.markers.topLeft,
+            result.markers.topRight,
+            result.markers.bottomRight,
+            result.markers.bottomLeft
+        ];
+
+        overlayContext.beginPath();
+        overlayContext.moveTo(ordered[0].x, ordered[0].y);
+
+        for (let index = 1; index < ordered.length; index += 1) {
+            overlayContext.lineTo(ordered[index].x, ordered[index].y);
+        }
+
+        overlayContext.closePath();
+        overlayContext.fill();
+        overlayContext.stroke();
+
+        ordered.forEach((point) => {
+            overlayContext.beginPath();
+            overlayContext.arc(point.x, point.y, 10, 0, Math.PI * 2);
+            overlayContext.fillStyle = "#45dc91";
+            overlayContext.fill();
+        });
+    }
+
+    generateButton.addEventListener("click", renderSheet);
+
+    printButton.addEventListener("click", () => {
+        renderSheet();
+        window.print();
+    });
+
+    syncScanButton.addEventListener("click", () => {
+        scanQuestionCountInput.value = clampQuestionCount(questionCountInput.value);
+        renderResultRows(scanQuestionCountInput.value);
+    });
+
+    questionCountInput.addEventListener("change", renderSheet);
+    sheetTitleInput.addEventListener("change", renderSheet);
+    scanQuestionCountInput.addEventListener("change", () => {
+        scanQuestionCountInput.value = clampQuestionCount(scanQuestionCountInput.value);
+        renderResultRows(scanQuestionCountInput.value);
+        recentDetections = [];
+    });
+
+    startScanButton.addEventListener("click", async () => {
+        try {
+            await startCamera();
+        } catch (error) {
+            console.error(error);
+            setStatus("Camera failed", "bad");
+            stabilityChip.textContent = error.message || "Permission denied or unsupported browser";
+        }
+    });
+
+    stopScanButton.addEventListener("click", async () => {
+        await stopCamera();
+    });
+
+    cameraSelect.addEventListener("change", async () => {
+        if (stream) {
+            await startCamera();
+        }
+    });
+
+    window.addEventListener("beforeunload", () => {
+        if (stream) {
+            stream.getTracks().forEach((track) => track.stop());
+        }
+    });
+
+    if (window.__cvRuntimeReady) {
+        cvReady = true;
+        setStatus("Ready to scan");
+        stabilityChip.textContent = "Waiting for sheet";
+        if (cvReadyPromiseResolve) {
+            cvReadyPromiseResolve();
+        }
+    } else {
+        window.__onCvReady = () => {
+            cvReady = true;
+            setStatus("Ready to scan");
+            stabilityChip.textContent = "Waiting for sheet";
+            if (cvReadyPromiseResolve) {
+                cvReadyPromiseResolve();
+            }
+        };
+    }
+
+    renderSheet();
+    renderResultRows(scanQuestionCountInput.value);
+    populateCameras();
+</script>
+</body>
+</html>
