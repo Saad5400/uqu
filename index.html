@@ -226,8 +226,9 @@
 
         .video-shell {
             position: relative;
-            width: min(100%, var(--scanner-width));
-            aspect-ratio: 4 / 3;
+            width: min(100%, 620px);
+            min-height: 560px;
+            height: clamp(560px, 72vh, 840px);
             border-radius: 24px;
             overflow: hidden;
             background:
@@ -238,6 +239,7 @@
         }
 
         video,
+        .capture-preview,
         .overlay {
             position: absolute;
             inset: 0;
@@ -248,6 +250,20 @@
         video {
             object-fit: cover;
             background: #09192a;
+        }
+
+        .capture-preview {
+            display: none;
+            background: #09192a;
+        }
+
+        .video-shell.captured .capture-preview {
+            display: block;
+        }
+
+        .video-shell.captured video {
+            opacity: 0;
+            pointer-events: none;
         }
 
         .overlay {
@@ -399,6 +415,21 @@
             .scanner-grid {
                 grid-template-columns: 1fr;
             }
+
+            .video-shell {
+                width: 100%;
+                min-height: 68svh;
+                height: min(78svh, 920px);
+                border-radius: 20px;
+            }
+
+            .scanner-hud {
+                left: 12px;
+                right: 12px;
+                bottom: 12px;
+                flex-direction: column;
+                align-items: stretch;
+            }
         }
 
         @media print {
@@ -480,7 +511,7 @@
     <section class="panel">
         <div class="panel-head">
             <h2>2. Scan Sheet</h2>
-            <p>Point the camera at the printed sheet. The app detects the four registration markers, corrects perspective, and reads bubble darkness live.</p>
+            <p>Point the camera at the printed sheet. The app detects the four registration markers, corrects perspective, and automatically locks the frame once the sheet is stable and clear.</p>
         </div>
 
         <div class="controls">
@@ -505,8 +536,9 @@
         </div>
 
         <div class="scanner-grid">
-            <div class="video-shell">
+            <div class="video-shell" id="videoShell">
                 <video id="video" playsinline muted></video>
+                <canvas id="capturePreview" class="capture-preview"></canvas>
                 <canvas id="overlay" class="overlay"></canvas>
                 <div class="scanner-hud">
                     <div id="statusChip" class="status-chip">OpenCV loading...</div>
@@ -525,7 +557,7 @@
                         <span>Multiple / uncertain</span>
                     </div>
                 </div>
-                <div class="notice" id="scanNotice">Camera access needs a secure context. If the camera does not open from a local file, serve this HTML from <strong>localhost</strong>.</div>
+                <div class="notice" id="scanNotice">Camera access needs a secure context. If the camera does not open from a local file, serve this HTML from <strong>localhost</strong>. Once the sheet is aligned for a few steady frames, the preview freezes automatically.</div>
                 <div class="results-list" id="resultsList"></div>
             </div>
         </div>
@@ -571,7 +603,10 @@
     const startScanButton = document.getElementById("startScanButton");
     const stopScanButton = document.getElementById("stopScanButton");
     const cameraSelect = document.getElementById("cameraSelect");
+    const videoShell = document.getElementById("videoShell");
     const video = document.getElementById("video");
+    const capturePreview = document.getElementById("capturePreview");
+    const capturePreviewContext = capturePreview.getContext("2d");
     const overlay = document.getElementById("overlay");
     const overlayContext = overlay.getContext("2d");
     const processingCanvas = document.getElementById("processingCanvas");
@@ -589,6 +624,9 @@
     let cvReady = false;
     let cvReadyPromiseResolve = null;
     let lastStatus = "";
+    let isCaptureLocked = false;
+
+    const AUTO_CAPTURE_STABLE_FRAMES = 6;
 
     const cvReadyPromise = new Promise((resolve) => {
         cvReadyPromiseResolve = resolve;
@@ -611,6 +649,12 @@
         }
 
         lastStatus = message + tone;
+    }
+
+    function clearCapturedPreview() {
+        capturePreviewContext.clearRect(0, 0, capturePreview.width, capturePreview.height);
+        videoShell.classList.remove("captured");
+        isCaptureLocked = false;
     }
 
     async function ensureCvReady(timeoutMs = 12000) {
@@ -862,6 +906,7 @@
 
         await ensureCvReady();
         await stopCamera();
+        clearCapturedPreview();
 
         const selectedDeviceId = cameraSelect.value;
         const constraints = selectedDeviceId ? {
@@ -890,12 +935,20 @@
         recentDetections = [];
         overlay.width = video.videoWidth || 1280;
         overlay.height = video.videoHeight || 720;
+        capturePreview.width = overlay.width;
+        capturePreview.height = overlay.height;
         setStatus("Camera live", "good");
         stabilityChip.textContent = "Searching for sheet";
         scanLoop();
     }
 
-    async function stopCamera() {
+    async function stopCamera(options = {}) {
+        const {
+            clearOverlay = true,
+            resetCapture = true,
+            preserveStatus = false
+        } = options;
+
         if (scanLoopHandle) {
             cancelAnimationFrame(scanLoopHandle);
             scanLoopHandle = 0;
@@ -907,12 +960,22 @@
         }
 
         video.srcObject = null;
-        overlayContext.clearRect(0, 0, overlay.width, overlay.height);
+        if (clearOverlay) {
+            overlayContext.clearRect(0, 0, overlay.width, overlay.height);
+        }
+
+        if (resetCapture) {
+            clearCapturedPreview();
+        }
+
         startScanButton.disabled = false;
         stopScanButton.disabled = true;
         recentDetections = [];
-        setStatus(cvReady ? "Ready to scan" : "OpenCV loading...");
-        stabilityChip.textContent = "Waiting for sheet";
+
+        if (!preserveStatus) {
+            setStatus(cvReady ? "Ready to scan" : "OpenCV loading...");
+            stabilityChip.textContent = "Waiting for sheet";
+        }
     }
 
     function getScanLayout() {
@@ -920,6 +983,10 @@
     }
 
     function scanLoop() {
+        if (isCaptureLocked) {
+            return;
+        }
+
         if (!stream || video.readyState < 2) {
             scanLoopHandle = requestAnimationFrame(scanLoop);
             return;
@@ -946,13 +1013,19 @@
         if (result.answers) {
             recentDetections.push(result.answers);
 
-            if (recentDetections.length > 8) {
+            if (recentDetections.length > AUTO_CAPTURE_STABLE_FRAMES) {
                 recentDetections.shift();
             }
 
             const stableAnswers = aggregateDetections(recentDetections);
             updateResultRows(stableAnswers);
-            stabilityChip.textContent = `${recentDetections.length}/8 stable frames`;
+
+            if (recentDetections.length >= AUTO_CAPTURE_STABLE_FRAMES) {
+                captureCurrentFrame(videoWidth, videoHeight, stableAnswers);
+                return;
+            }
+
+            stabilityChip.textContent = `Hold steady ${recentDetections.length}/${AUTO_CAPTURE_STABLE_FRAMES}`;
             setStatus("Sheet detected", "good");
         } else {
             recentDetections = [];
@@ -961,6 +1034,22 @@
         }
 
         scanLoopHandle = requestAnimationFrame(scanLoop);
+    }
+
+    function captureCurrentFrame(videoWidth, videoHeight, stableAnswers) {
+        capturePreview.width = videoWidth;
+        capturePreview.height = videoHeight;
+        capturePreviewContext.drawImage(processingCanvas, 0, 0, videoWidth, videoHeight);
+        videoShell.classList.add("captured");
+        isCaptureLocked = true;
+        updateResultRows(stableAnswers);
+        setStatus("Captured sheet", "good");
+        stabilityChip.textContent = "Frame locked. Press Start Camera to rescan";
+        stopCamera({
+            clearOverlay: false,
+            resetCapture: false,
+            preserveStatus: true
+        });
     }
 
     function aggregateDetections(detections) {
@@ -1267,6 +1356,10 @@
         scanQuestionCountInput.value = clampQuestionCount(scanQuestionCountInput.value);
         renderResultRows(scanQuestionCountInput.value);
         recentDetections = [];
+
+        if (!stream) {
+            clearCapturedPreview();
+        }
     });
 
     startScanButton.addEventListener("click", async () => {
